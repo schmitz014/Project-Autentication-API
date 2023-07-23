@@ -31,15 +31,92 @@ app.post('/register', async (req, res) => {
  } = req.body;
 
  if(!username){
-  return res.status(400).json({ msg: 'Username is required' });
- }else if(!email){
-  return res.status(400).json({ msg: 'Email is required' });
- }else if(!password){
-  return res.status(400).json({ msg: 'Password is required' });
- }else if(!confirmPassword){
-  return res.status(400).json({ msg: 'You must confirm your password!' });
+  return res.status(422).json({ msg: 'Username is required' });
+ }
+  if(!email){
+  return res.status(422).json({ msg: 'Email is required' });
+ }
+ if(!password){
+  return res.status(422).json({ msg: 'Password is required' });
+ }
+  if(!confirmPassword){
+  return res.status(422).json({ msg: 'You must confirm your password!' });
+ }
+ if(password !== confirmPassword){
+  return res.status(422).json({ msg: 'Password does not match!' });
  }
 
+//check if user exists
+const userExists = await User.findOne({ username: username });
+
+if(userExists) {
+ return res.status(200).json({ msg: 'User already exists! Create a new username!' });
+}
+
+ //check if user email exists
+ const userEmailExists = await User.findOne({ email: email });
+
+ if(userEmailExists){
+  return res.status(422).json({ msg: 'User already exists! Try another email!' });
+ }
+
+ //create password
+ const salt = await bcrypt.genSalt(12);
+ const hashedPassword = await bcrypt.hash(password, salt);
+
+ //create user
+ const user = new User({
+  username,
+  email,
+  password: hashedPassword,
+ });
+
+ try {
+  await user.save();
+  res.status(201).json('User created successfully!');
+ } catch (error) {
+  return res.status(500).json({ msg: 'Internal server error' });
+ }
+});
+
+//Login User
+app.post('/login', async (req, res) => {
+ const { email, password } = req.body;
+
+ if (!email) {
+  return res.status(422).json({ msg: 'Email is required' });
+ }
+ if (!password) {
+  return res.status(422).json({ msg: 'Password is required' });
+ }
+
+ //check if user exists
+ const user = await User.findOne({ email: email});
+
+ if (!user) {
+  return res.status(404).json({ msg: 'User not found' });
+ }
+
+ //check if password is correct
+ const isMatch = await bcrypt.compare(password, user.password);
+
+ if (!isMatch) {
+  return res.status(400).json({ msg: 'Invalid password' });
+ }
+
+ try {
+  const secret = process.env.JWT_SECRET;
+  const token = jwt.sign({ 
+   id: user._id 
+  }, 
+  secret, { 
+   expiresIn: '1h' 
+  });
+
+  res.status(200).json({ msg: 'User logged in successfully!', token});
+ } catch (err) {
+  res.status(500).json({msg: err.message});
+ }
 });
 
 // MongoDB connection
