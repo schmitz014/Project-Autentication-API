@@ -9,6 +9,12 @@ const app = express();
 
 const port = 8080;
 
+//Config JSON response
+app.use(express.json());
+
+//Models
+const User = require('./models/User');
+
 //Public Route
 app.get('/', (req, res) => {
  res.status(200).json({ msg: 'Port OK' });
@@ -28,13 +34,22 @@ app.get('/user/:id', async (req, res) => {
  return res.status(200).json({ msg: `User found: `, user });
 });
 
+function checkToken(req, res, next){
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
 
+  if(!token){
+    return res.status(401).json({message: 'You are not authorized!'});
+  }
 
-//Config JSON response
-app.use(express.json());
-
-//Models
-const User = require('./models/User');
+  try {
+    const secret = process.env.JWT_SECRET;
+    jwt.verify(token, secret);
+    next();
+  } catch (error) {
+    res.status(400).json({message: 'Invalid token!'});
+  }
+}
 
 //Register Route
 app.post('/register', async (req, res) => {
@@ -123,7 +138,7 @@ app.post('/login', async (req, res) => {
  try {
   const secret = process.env.JWT_SECRET;
   const token = jwt.sign({ 
-    id: user.id 
+    id: user._id 
   }, 
     secret
   );
