@@ -15,18 +15,20 @@ app.get('/', (req, res) => {
 });
 
 //Private Route
-app.get('/user', async (req, res) => {
+app.get('/user/:id', async (req, res) => {
  const id = req.params.id;
 
  //check if user exists
  const user = await User.findById(id, '-password');
 
  if (!user){
-  return res.status(404).json({ msg: 'User not found' });
+  return res.status(404).json({ msg: 'User not found!' });
  }
 
- return res.status(200).json({ msg: `User ${user} found!` });
+ return res.status(200).json({ msg: `User found: `, user });
 });
+
+
 
 //Config JSON response
 app.use(express.json());
@@ -121,16 +123,16 @@ app.post('/login', async (req, res) => {
  try {
   const secret = process.env.JWT_SECRET;
   const token = jwt.sign({ 
-   id: user._id 
+    id: user.id 
   }, 
-  secret, { 
-   expiresIn: '1h' 
-  });
-
+    secret
+  );
   res.status(200).json({ msg: 'User logged in successfully!', token});
+
  } catch (err) {
-  res.status(500).json({msg: err.message});
+  res.status(500).json({msg: 'Cannot login user! Try again later!'});
  }
+ 
 });
 
 // MongoDB connection
