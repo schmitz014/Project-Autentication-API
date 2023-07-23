@@ -9,9 +9,23 @@ const app = express();
 
 const port = 8080;
 
-//Open Route
+//Public Route
 app.get('/', (req, res) => {
  res.status(200).json({ msg: 'Port OK' });
+});
+
+//Private Route
+app.get('/user', async (req, res) => {
+ const id = req.params.id;
+
+ //check if user exists
+ const user = await User.findById(id, '-password');
+
+ if (!user){
+  return res.status(404).json({ msg: 'User not found' });
+ }
+
+ return res.status(200).json({ msg: `User ${user} found!` });
 });
 
 //Config JSON response
